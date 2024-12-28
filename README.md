@@ -1,6 +1,6 @@
 # YouTrack export
 
-Export YouTrack issues Github issues.
+Export YouTrack issues to Github.
 
 ## Usage
 
