@@ -122,7 +122,7 @@ for youtrack_issue in issues:
             print(f"Creating label {label}")
             repo.create_label(
                 name=label,
-                color="".join([f"{random.randint(0, 255):x}" for _ in range(3)]),
+                color="".join([f"{random.randint(0, 255):02x}" for _ in range(3)]),
             )
 
     issue = repo.create_issue(title=title, body=body, labels=labels)
