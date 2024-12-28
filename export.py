@@ -1,14 +1,16 @@
 import requests
 import os
 import json
-from github import Github, Auth as GithubAuth
+from github import Github, GithubIntegration, Auth as GithubAuth
 from datetime import datetime
 from jinja2 import Template
 import random
 
 
-def get_env(name: str) -> str:
+def get_env(name: str, default: str = None) -> str:
     value = os.environ.get(name)
+    if value is None and default is not None:
+        return default
     if not value:
         raise ValueError(f"Environment variable {name} is not set")
     return value
@@ -21,12 +23,44 @@ def format_date(timestamp: int) -> str:
 YOUTRACK_URL = get_env("YOUTRACK_URL")
 YOUTRACK_TOKEN = get_env("YOUTRACK_TOKEN")
 GITHUB_REPO = get_env("GITHUB_REPO")
-GITHUB_TOKEN = get_env("GITHUB_TOKEN")
+GITHUB_TOKEN = get_env("GITHUB_TOKEN", "")
+GITHUB_APP_ID = get_env("GITHUB_APP_ID", "")
 
 youtrack_session = requests.Session()
 youtrack_session.headers.update({"Authorization": f"Bearer {YOUTRACK_TOKEN}"})
 
-github = Github(auth=GithubAuth.Token(GITHUB_TOKEN))
+if GITHUB_TOKEN:
+    print("Using GitHub token")
+    github = Github(auth=GithubAuth.Token(GITHUB_TOKEN))
+elif GITHUB_APP_ID:
+    print(f"Using GitHub App {GITHUB_APP_ID}")
+
+    with open("key.pem", "r") as f:
+        auth = GithubAuth.AppAuth(GITHUB_APP_ID, f.read())
+
+    github_integration = GithubIntegration(auth=auth)
+
+    if not github_integration.get_installations():
+        raise ValueError("No GitHub installations found")
+
+    found = False
+    for installation in github_integration.get_installations():
+        github = installation.get_github_for_installation()
+        try:
+            github.get_repo(GITHUB_REPO)
+            found = True
+            break
+        except:
+            continue
+
+    if not found:
+        raise ValueError(
+            f"Repository {GITHUB_REPO} not found for any of the installations"
+        )
+
+else:
+    raise ValueError("Either GITHUB_TOKEN or GITHUB_APP_ID must be set")
+
 
 # Fetch all issues from YouTrack
 
@@ -37,8 +71,6 @@ print(f"Found {len(issue_ids)} issues on YouTrack")
 
 issues = []
 for issue_id in issue_ids:
-    print(f"Fetching issue {issue_id}")
-
     issue = youtrack_session.get(
         f"{YOUTRACK_URL}api/issues/{issue_id}?fields=id,idReadable,summary,description,created,updated,resolved,customFields(name,value(name,presentation,text)),comments(created,text,author(fullName)),tags(name)"
     ).json()

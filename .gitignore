@@ -1,2 +1,4 @@
+.env
 .venv
 issues.json
+key.pem
