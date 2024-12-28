@@ -1,0 +1,13 @@
+# {{ issue.summary }}
+
+## Description
+{{ issue.description }}
+
+## Details
+{% for customField in issue.customFields %}{% if customField.value %}
+**{{ customField.name }}**: {{ customField.value.name }}{% endif %}{% endfor %}
+**Created**: {{ format_date(issue.created) }}
+**Updated**: {{ format_date(issue.updated) }}
+{% if issue.resolved %}**Resolved**: {{ format_date(issue.resolved) }}{% endif %}
+
+[Link to issue {{ issue.idReadable }} in YouTrack]({{ youtrack_url }}issue/{{ issue.idReadable }})
